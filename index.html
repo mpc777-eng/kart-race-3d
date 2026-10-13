@@ -15,6 +15,7 @@ h1{font-size:9vh;margin:0 0 2vh}
 .ctl{position:fixed;bottom:3vh;width:17vh;height:17vh;border-radius:50%;background:#fff7;border:.6vh solid #fff;font-size:9vh;display:none;align-items:center;justify-content:center;z-index:7}
 .ctl.on{background:#ffeb3bcc}
 #I{right:calc(3vw + 20vh);bottom:12vh;width:13vh;height:13vh;font-size:6vh;background:#ffd23fcc}#slot{font-size:6vh}
+#C{top:9vh;bottom:auto;left:3vw;width:10vh;height:10vh;font-size:5vh}
 #L{left:3vw}#R{left:calc(3vw + 20vh)}#U{right:3vw;bottom:23vh}#D{right:3vw}
 #finish,#shop{display:none;background:#0008}
 #shop{background:linear-gradient(#5b2bd6,#2b8be0);flex-direction:row}
@@ -34,7 +35,7 @@ h1{font-size:9vh;margin:0 0 2vh}
 <div id="finish" class="scr"><h1 id="fh">You finished!</h1><div id="fc" style="font-size:5vh"></div><button class="btn" id="again">🔁 Race Again</button><button class="btn y" id="menu">🏠 Menu</button></div>
 <div id="hud"><span id="pos">1st</span><span id="lap">Lap 1/3</span><span id="slot">⬜</span><span id="coins">🪙 0</span></div>
 <div id="big"></div>
-<div class="ctl" id="I">🎁</div><div class="ctl" id="L">👈</div><div class="ctl" id="R">👉</div><div class="ctl" id="U">👆</div><div class="ctl" id="D">👇</div>
+<div class="ctl" id="C">🎥</div><div class="ctl" id="I">🎁</div><div class="ctl" id="L">👈</div><div class="ctl" id="R">👉</div><div class="ctl" id="U">👆</div><div class="ctl" id="D">👇</div>
 <script type="module">
 import * as THREE from "./three.module.min.js";
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
@@ -70,6 +71,9 @@ function makeKart(mat,hair,shirt){const k=new THREE.Group();
  [-.17,.17].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.08,8,6),M(0x111111));e.position.set(x,2,.1);k.add(e)});
  const sm=new THREE.Mesh(new THREE.TorusGeometry(.15,.04,6,12,Math.PI),M(0xaa2222));sm.position.set(0,1.82,.12);sm.rotation.z=Math.PI;k.add(sm);
  const bub=new THREE.Mesh(new THREE.SphereGeometry(2.6,16,12),new THREE.MeshStandardMaterial({color:0x66ccff,transparent:true,opacity:.35}));bub.position.y=1.2;bub.visible=false;k.add(bub);k.bub=bub;
+ const sw=new THREE.Mesh(new THREE.TorusGeometry(.42,.07,8,20),M(0x222222));sw.position.set(0,1.75,.3);sw.rotation.x=-.5;k.add(sw);k.sw=sw;
+ const dash=new THREE.Mesh(new THREE.BoxGeometry(1.6,.35,.5),M(0x333333));dash.position.set(0,1.05,.75);k.add(dash);
+ k.head=[head,helm];
  k.body=body;k.nose=nose;k.wing=wing;k.traverse(o=>o.castShadow=true);return k}
 
 // ---------- main scene ----------
@@ -143,6 +147,11 @@ function useItem(k){const u=k.u,it=u.item;if(!it)return;u.item=null;
 function whoosh(){if(!AC)return;const n=AC.sampleRate*.6,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.sin(i/n*Math.PI)*.5;
  const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type="bandpass";f.frequency.setValueAtTime(400,AC.currentTime);f.frequency.exponentialRampToValueAtTime(3000,AC.currentTime+.6);s.connect(f).connect(AC.destination);s.start()}
 const near=(k,i,r)=>{let d=k.u.idx-i;if(d<-N/2)d+=N;if(d>N/2)d-=N;return d>=0&&d<r};
+const fx=[];const starG=new THREE.OctahedronGeometry(.45),puffG=new THREE.SphereGeometry(.7,8,6);
+function puff(x,z){for(let i=0;i<8;i++){const st=i%2==0;const m=new THREE.Mesh(st?starG:puffG,new THREE.MeshBasicMaterial({color:st?0xffe600:0xffffff,transparent:true}));m.position.set(x,1.5,z);
+ const a=i/8*Math.PI*2;m.userData={vx:Math.cos(a)*5,vz:Math.sin(a)*5,vy:4+Math.random()*3,life:.7};S.add(m);fx.push(m)}}
+function bonk(){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain();o.type="sine";o.frequency.setValueAtTime(520,AC.currentTime);o.frequency.exponentialRampToValueAtTime(140,AC.currentTime+.18);
+ g.gain.setValueAtTime(.35,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.25);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+.25);setTimeout(()=>beep(1200,.08,"triangle",.12),60)}
 // ---------- karts ----------
 const NPC=[["Zoe",0xff66cc,0x7a3cff,0xff1e8c],["Max",0x2266ff,0x111111,0x22ccff],["Lily",0x33cc44,0xffcc00,0xffee22],["Leo",0xff8800,0x663300,0xff5500],["Mia",0x9933ff,0x222222,0xbb66ff],["Sam",0x00bbaa,0xffffff,0x00ffcc]];
 const karts=[];
@@ -210,6 +219,9 @@ function finishRace(){state="finish";const place=karts.filter(k=>k.u.done).lengt
  setTimeout(()=>{if(state=="finish")show("finish")},2500);podiumT=0}
 let podiumT=-1;
 
+let headCam=localStorage.kr3dCam=="head";
+function togCam(e){if(e){e.preventDefault();e.stopPropagation()}headCam=!headCam;localStorage.kr3dCam=headCam?"head":"chase";beep(800,.08,"triangle")}
+$("C").addEventListener("touchstart",togCam,{passive:false});$("C").onmousedown=()=>togCam();addEventListener("keydown",e=>{if(e.key=="c")togCam()});
 // ---------- loop ----------
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
@@ -237,7 +249,12 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
     u.speed+=(cap-u.speed)*dt*.8}
    if(u.spin>0){u.spin-=dt;u.speed*=1-2*dt}k.rotation.y=u.h+(u.spin>0?u.spin*12:0);k.position.x+=Math.sin(u.h)*u.speed*dt;k.position.z+=Math.cos(u.h)*u.speed*dt}
   // kart bumping
-  for(const o of karts){if(o==k)continue;const dx=k.position.x-o.position.x,dz=k.position.z-o.position.z,d=Math.hypot(dx,dz);if(d<3&&d>0){k.position.x+=dx/d*(3-d)*.5;k.position.z+=dz/d*(3-d)*.5}}
+  for(let oi=ki+1;oi<karts.length;oi++){const o=karts[oi];if(!o.u)continue;const dx=k.position.x-o.position.x,dz=k.position.z-o.position.z,d=Math.hypot(dx,dz);
+   if(d<3.2&&d>0){const nx=dx/d,nz=dz/d,pen=(3.2-d)*.5;k.position.x+=nx*pen;k.position.z+=nz*pen;o.position.x-=nx*pen;o.position.z-=nz*pen;
+    if(racing&&(k.u.bc||0)<=0&&(o.u.bc||0)<=0){const kick=8;k.u.kx=nx*kick;k.u.kz=nz*kick;o.u.kx=-nx*kick;o.u.kz=-nz*kick;k.u.wob=o.u.wob=.6;k.u.bc=o.u.bc=.5;k.u.speed*=.9;o.u.speed*=.9;
+     puff((k.position.x+o.position.x)/2,(k.position.z+o.position.z)/2);if(k.u.player||o.u.player)bonk();if(window.__bumps!=null)window.__bumps++}}}
+  if(k.u.kx){k.position.x+=k.u.kx*dt;k.position.z+=k.u.kz*dt;k.u.kx*=1-5*dt;k.u.kz*=1-5*dt;if(Math.abs(k.u.kx)+Math.abs(k.u.kz)<.1)k.u.kx=k.u.kz=0}
+  k.u.bc=Math.max(0,(k.u.bc||0)-dt);if(k.u.wob>0){k.u.wob-=dt;k.rotation.z=Math.sin(k.u.wob*30)*k.u.wob*.35}else k.rotation.z=0;
   k.wheels.forEach(w=>w.rotation.x+=u.speed*dt*2);if(racing){
    u.boost=Math.max(0,u.boost-dt);u.shield=Math.max(0,u.shield-dt);k.bub.visible=u.shield>0;
    if(u.y<=0&&u.speed>10&&RAMPS.some(i=>near(k,i,3))&&Math.abs(u.off)<W*.55){u.vy=11+u.speed*.12;u.y=.01;if(u.player)beep(500,.3,"sine")}
@@ -251,6 +268,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  });
  // coins
  trackCoins.forEach(c=>{c.rotation.y+=dt*3;if(c.visible&&racing&&c.position.distanceTo(player.position)<3.2){c.visible=false;raceCoins++;beep(1320,.12,"triangle")}});
+ for(let i=fx.length-1;i>=0;i--){const m=fx[i],d=m.userData;d.life-=dt;m.position.x+=d.vx*dt;m.position.z+=d.vz*dt;m.position.y+=d.vy*dt;d.vy-=12*dt;m.rotation.y+=dt*8;m.material.opacity=Math.max(0,d.life/.7);if(d.life<=0){S.remove(m);fx.splice(i,1)}}
  boxes.forEach(b=>{b.rotation.y+=dt*2;b.rotation.x+=dt;});padM.map.offset.y-=dt*1.5;
  flags.forEach((f,i)=>f.rotation.y=Math.sin(t*3+i)*.4);crowd.forEach((c,i)=>c.position.y=c.userData.b+Math.max(0,Math.sin(t*8+i))*.3);
  // hud
@@ -262,7 +280,10 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  if(state=="title"){cam.position.set(Math.cos(t*.1)*260,90,Math.sin(t*.1)*220);cam.lookAt(0,0,0)}
  else{const p=player,h=p.u?p.u.h:0;const want=new THREE.Vector3(p.position.x-Math.sin(h)*11,5.5,p.position.z-Math.cos(h)*11);
   if(state=="finish"&&podiumT>=0)want.set(p.position.x+Math.sin(t*.5)*12,5,p.position.z+Math.cos(t*.5)*12);
-  cam.position.lerp(want,Math.min(1,dt*6));cam.lookAt(p.position.x+Math.sin(h)*5,1.5,p.position.z+Math.cos(h)*5)}
+  const hc=headCam&&!(state=="finish"&&podiumT>=0);p.head.forEach(m=>m.visible=!hc);
+  if(hc){const bob=Math.sin(t*14)*.04*Math.min(1,Math.abs(p.u.speed)/15);cam.position.set(p.position.x-Math.sin(h)*1,p.position.y+2.4+bob,p.position.z-Math.cos(h)*1);cam.lookAt(p.position.x+Math.sin(h)*20,p.position.y-1.2,p.position.z+Math.cos(h)*20);cam.rotateZ((p.rotation.z||0))}
+  else{cam.position.lerp(want,Math.min(1,dt*6));cam.lookAt(p.position.x+Math.sin(h)*5,1.5,p.position.z+Math.cos(h)*5)}
+  const st=inp();p.sw.rotation.z+=(((st.left?1:0)-(st.right?1:0))*.6-p.sw.rotation.z)*Math.min(1,dt*10)}
  R.render(S,cam)}
 function rs(){R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener("resize",rs);rs();
 resetRace();title();requestAnimationFrame(frame);
